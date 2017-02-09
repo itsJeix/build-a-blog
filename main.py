@@ -15,11 +15,64 @@
 # limitations under the License.
 #
 import webapp2
+import jinja2
+import os
 
-class MainHandler(webapp2.RequestHandler):
+from google.appengine.ext import db
+
+template_dir = os.path.join(os.path.dirname(__file__), 'templates')
+jinja_env = jinja2.Environment(loader= jinja2.FileSystemLoader(template_dir), autoescape=True)
+
+
+class Handler(webapp2.RequestHandler):
+    def write(self, *args, **kwargs):
+        self.response.out.write(*args, **kwargs)
+
+    def render_str(self, template, **params):
+        t = jinja_env.get_template(template)
+        return t.render(params)
+
+    def render(self, template, **kwargs):
+        self.write(self.render_str(template, ** kwargs))
+
+
+class Post(db.Model):
+    title = db.StringProperty(required=True)
+    body = db.TextProperty(required=True)
+    created = db.DateTimeProperty(auto_now_add=True)
+
+
+class MainHandler(Handler):
     def get(self):
-        self.response.write('Hello world!')
+        self.render_posting()
+
+    def render_posting(self, title="", body="", error=""):
+        posts = db.GqlQuery("SELECT * FROM Post "
+                           "ORDER BY created DESC "
+                            "LIMIT 5 ")
+        self.render("main.html", title=title, body=body, error=error, posts=posts)
+
+
+class NewPostHandler(Handler):
+    def get(self):
+        self.render("newpost.html")
+
+    def post(self):
+        title = self.request.get("title")
+        body = self.request.get("body")
+
+        if title and body:
+            p = Post(title=title, body=body)
+            p.put()
+            self.redirect("/")
+
+        else:
+            error = "Please fill in the fields"
+            self.render_posting(error=error, title=title, body=body)
+
+
 
 app = webapp2.WSGIApplication([
-    ('/', MainHandler)
+    ('/', MainHandler),
+    ('/newpost', NewPostHandler),
 ], debug=True)
