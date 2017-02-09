@@ -46,11 +46,11 @@ class MainHandler(Handler):
     def get(self):
         self.render_posting()
 
-    def render_posting(self, title="", body="", error=""):
+    def render_posting(self):
         posts = db.GqlQuery("SELECT * FROM Post "
                            "ORDER BY created DESC "
                             "LIMIT 5 ")
-        self.render("main.html", title=title, body=body, error=error, posts=posts)
+        self.render("main.html", posts=posts)
 
 
 class NewPostHandler(Handler):
@@ -64,15 +64,22 @@ class NewPostHandler(Handler):
         if title and body:
             p = Post(title=title, body=body)
             p.put()
-            self.redirect("/")
+            self.redirect("/blog/{}".format(p.key().id()))
 
         else:
             error = "Please fill in the fields"
             self.render_posting(error=error, title=title, body=body)
 
 
+class BlogHandler(Handler):
+    def get(self, id):
+        post = Post.get_by_id(int(id))
+        # self.response.write(Post.get_by_id(int(id)))
+        self.render("blog.html", post=post)
+
 
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
     ('/newpost', NewPostHandler),
+    (webapp2.Route('/blog/<id:\d+>', BlogHandler)),
 ], debug=True)
