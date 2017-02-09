@@ -44,13 +44,16 @@ class Post(db.Model):
 
 class MainHandler(Handler):
     def get(self):
-        self.render_posting()
+        page = self.request.get('page')
+        page = page and int(page)
+        total = get_posts().count()
+        if not page:
+            posts = get_posts()
+            self.render("main.html", posts=posts, total=total, page=1)
+        else:
+            posts = get_posts(offset=(5*page - 5))
+            self.render("main.html", posts=posts, total=total, page=page)
 
-    def render_posting(self):
-        posts = db.GqlQuery("SELECT * FROM Post "
-                           "ORDER BY created DESC "
-                            "LIMIT 5 ")
-        self.render("main.html", posts=posts)
 
 
 class NewPostHandler(Handler):
@@ -74,12 +77,18 @@ class NewPostHandler(Handler):
 class BlogHandler(Handler):
     def get(self, id):
         post = Post.get_by_id(int(id))
-        # self.response.write(Post.get_by_id(int(id)))
         self.render("blog.html", post=post)
 
+
+def get_posts(limit=5, offset=0):
+    posts = db.GqlQuery("SELECT * FROM Post "
+                        "ORDER BY created DESC "
+                        "LIMIT {} OFFSET {} ".format(limit, offset))
+    return posts
 
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
     ('/newpost', NewPostHandler),
     (webapp2.Route('/blog/<id:\d+>', BlogHandler)),
 ], debug=True)
+

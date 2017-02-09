@@ -7,4 +7,12 @@
         <pre class="post-body">{{post.body}}</pre>
 </div>
 {% endfor %}
+{% if page > 1 %}
+<a href="/?page={{ page-1 }}" name="page">Previous Page</a>
+{% if total > (page * 5) %}
+|
+{% endif %}{% endif %}
+{% if total > (page * 5) %}
+<a href="/?page={{ page+1 }}" name="page">Next Page</a>
+{% endif %}
 {% endblock %}
